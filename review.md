@@ -25,12 +25,5 @@ Both skills include an explicit "what not to do" section, since the failure
 modes here are mostly over-eagerness — batch-adding unverified feed URLs, or
 padding a genuinely empty result into prose.
 
-## Tests
 
-No automated tests — these are skill prompt definitions, not code. Verified only
-that the frontmatter parses as valid YAML and that each `description` states a
-concrete trigger condition.
-
-## Not done here
-
-No PR opened and nothing merged — that's yours.
+no <<<<<<<
