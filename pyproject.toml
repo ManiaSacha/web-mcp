@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "web-mcp"
+version = "0.1.0"
+description = "Semantic search over RSS/news feeds for AI agents — a single-file MCP server, no API key, no cloud."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mania Sacha" }]
+keywords = ["mcp", "rss", "atom", "news", "search", "agents", "claude"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "mcp>=1.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+web-mcp = "web_mcp:main"
+
+[project.urls]
+Homepage = "https://github.com/ManiaSacha/web-mcp"
+Issues = "https://github.com/ManiaSacha/web-mcp/issues"
+
+[tool.hatch.build.targets.wheel]
+include = ["web_mcp.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
