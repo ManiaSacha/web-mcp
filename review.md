@@ -1,24 +1,29 @@
-# Review — `feature/add-claude-agents`
+# Review — `feature/add-claude-skills`
 
-
+Branched from `main`. Independent of the server code — mergeable in any order
+relative to the other branches.
 
 ## What changed
 
-Adds three Claude Code subagent definitions under `.claude/agents/`.
+Adds two Claude Code skills under `.claude/skills/`.
 
-- **`pm.md`** — product manager. Scopes features against the project's
-  single-file / stdlib-plus-`mcp` constraint, and treats anything touching
-  `fetch`/`add_feed` as a security-relevant change first. Encodes the rule that
-  new features must stay testable without live network access, since that's a
-  property of the existing suite worth protecting.
-- **`security-reviewer.md`** — audits the narrow but real risk surface:
-  `add_feed(url)` makes the server fetch arbitrary agent-supplied URLs. Lists
-  the concrete things to check each review (scheme allowlist, resolved-IP
-  checks, size cap, timeouts, per-feed exception isolation) and — importantly —
-  documents the two **known open gaps** so a future reviewer doesn't mistake
-  them for regressions or wave through a fix that only appears to close them:
-  DNS rebinding between check and fetch, and redirects not being re-validated.
-- **`git-pipeline.md`** — version control and pipeline manager
+- **`feed-curation/SKILL.md`** — adding, auditing, and pruning feeds on a
+  running instance. Covers reading `add_feed`'s response properly (zero articles
+  indexed is a *failure signal* even though the call succeeded), interpreting
+  each `source_health` status, and the fact that `remove_feed` also drops
+  already-indexed articles, so it should be confirmed with the user first rather
+  than treated as trivially reversible.
+- **`research-digest/SKILL.md`** — turning the raw tools into a synthesized
+  answer. The main rules it encodes: use `search` for topic questions and
+  `digest` for open-ended ones, synthesize rather than pasting tool output back
+  verbatim, run separate `search` calls per topic (TF-IDF is bag-of-words and
+  degrades when a query mixes unrelated terms), don't invent article detail
+  beyond the summary the feed actually published, and don't silently widen an
+  empty time window.
+
+Both skills include an explicit "what not to do" section, since the failure
+modes here are mostly over-eagerness — batch-adding unverified feed URLs, or
+padding a genuinely empty result into prose.
 
 
-no <<<<<<< 
+no <<<<<<<
