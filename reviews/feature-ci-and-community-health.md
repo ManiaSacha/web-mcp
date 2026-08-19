@@ -104,7 +104,47 @@ Every CI gate was run locally before pushing:
 - `python -m build` + wheel inspection — both console scripts present
 - All 8 YAML files under `.github/` parse
 
-## Note
+## Update — CI caught a real, currently-shipping bug
 
-CI cannot run on this branch until the workflow is merged to `main`; GitHub
-will show the checks on the PR itself, which is the first real run.
+The first real run of `ci.yml` (on this PR) failed all 7 test/package jobs.
+Root cause: `mcp` released a `2.0.0` major version that renamed `FastMCP` to
+`MCPServer` and relocated it from `mcp.server.fastmcp` to
+`mcp.server.mcpserver`, with no deprecation shim. `pyproject.toml` declares
+`mcp>=1.2.0` with no upper bound, so any clean install resolves to 2.0.0 and
+`from mcp.server.fastmcp import FastMCP` fails outright.
+
+This is not new to this branch — it is a live bug on `main` today, affecting
+anyone doing a fresh install right now, including the PyPI release. It went
+undetected through every branch in this whole sequence because the local dev
+machine already had `mcp==1.29.0` installed before this project existed, and
+`pip install -e .` does not upgrade a dependency that already satisfies the
+declared constraint. CI's from-scratch install is what actually exercises the
+real install path; nothing before this caught it because nothing before this
+started from empty.
+
+**Fix:** `web_mcp.py` now tries `mcp.server.mcpserver.MCPServer` first and
+falls back to `mcp.server.fastmcp.FastMCP` if that import fails. The two
+classes' `.tool()`/`.run()` surface — everything this file uses — is
+unchanged between them; confirmed directly rather than assumed, by
+constructing the real `web_mcp.mcp` server object under both versions in
+isolated environments and asserting `list_tools()` returns the identical 9
+tools with matching descriptions and input schemas in both.
+
+Verified in two clean venvs, one pinned to each side of the break:
+
+| Check | mcp 2.0.0 | mcp 1.29.0 |
+|---|---|---|
+| `pytest -q` | 53 passed | 53 passed |
+| `list_tools()` returns all 9, matching | ✅ | ✅ |
+| `web-mcp --help` | ✅ | ✅ |
+| `ruff check .` | ✅ | (unaffected by version) |
+| `validate_plugin.py` | ✅ | (unaffected by version) |
+
+No upper bound was added to the `mcp` dependency — the fallback exists so the
+package keeps working across the boundary in either direction, rather than
+freezing the project on the old major version.
+
+This fix is included in this branch, even though the bug is unrelated in
+origin to CI or community-health tooling, because this is the first branch
+whose checks could catch it, and holding it back would mean landing infra that
+demonstrably fails using code that is, right now, broken.

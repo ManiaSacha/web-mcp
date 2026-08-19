@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **A clean install was broken.** `mcp` shipped a `2.0.0` major release that
+  renamed `FastMCP` to `MCPServer` and moved it out of `mcp.server.fastmcp`
+  entirely, with no deprecation period. `pyproject.toml`'s unpinned
+  `mcp>=1.2.0` meant any fresh install resolved to 2.0.0 and failed on import.
+  This went undetected locally because the development machine already had
+  `mcp==1.29.0` installed from before, which `pip install -e .` does not
+  upgrade when the existing version already satisfies the constraint — CI's
+  clean install caught what a local run could not. Now imports `MCPServer`
+  when available and falls back to `FastMCP` otherwise; verified against both
+  `mcp==2.0.0` and `mcp==1.29.0` in isolated environments.
+
 ### Added
 - Continuous integration: tests on Python 3.10–3.13 on Linux, plus macOS and
   Windows on 3.12; `ruff` lint; a packaging job that installs the built wheel
