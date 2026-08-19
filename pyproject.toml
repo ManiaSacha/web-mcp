@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 # existing "webmcp" project — its check ignores separators. The repo, the
 # Claude Code plugin, the module, and the web-mcp command are all unaffected.
 name = "feed-mcp"
-version = "0.2.0"
+version = "0.2.1"
 description = "Semantic search over RSS/news feeds for AI agents — a single-file MCP server, no API key, no cloud."
 readme = "README.md"
 requires-python = ">=3.10"

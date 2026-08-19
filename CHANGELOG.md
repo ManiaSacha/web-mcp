@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-19
+
+> `0.2.0` was tagged but never published to PyPI — its tag predates the `mcp`
+> 2.0 fix below, which the release workflow's own test gate caught before
+> publish. `0.2.1` is the first version actually released; it includes
+> everything listed under `0.2.0` as well.
+
 ### Fixed
 - **A clean install was broken.** `mcp` shipped a `2.0.0` major release that
   renamed `FastMCP` to `MCPServer` and moved it out of `mcp.server.fastmcp`
@@ -92,6 +99,7 @@ and agents.
 - Scheme allowlist, public-address requirement, a 5 MB body cap, explicit fetch
   timeouts, and clamped `limit` arguments.
 
-[Unreleased]: https://github.com/ManiaSacha/web-mcp/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ManiaSacha/web-mcp/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/ManiaSacha/web-mcp/compare/v0.1.0...v0.2.1
 [0.2.0]: https://github.com/ManiaSacha/web-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ManiaSacha/web-mcp/releases/tag/v0.1.0
