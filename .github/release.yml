@@ -1,0 +1,27 @@
+# Categorises the auto-generated notes on a GitHub Release.
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: Security
+      labels:
+        - security
+    - title: Features
+      labels:
+        - enhancement
+        - feature
+    - title: Fixes
+      labels:
+        - bug
+        - feed-compatibility
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Dependencies and CI
+      labels:
+        - dependencies
+        - ci
+    - title: Other changes
+      labels:
+        - "*"

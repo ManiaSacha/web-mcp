@@ -1,0 +1,15 @@
+# Default owner for everything in the repo.
+*       @ManiaSacha
+
+# Fetching and its guards — review these together, and read
+# docs/SECURITY-MODEL.md before approving changes here.
+/web_mcp.py                     @ManiaSacha
+/SECURITY.md                    @ManiaSacha
+/docs/SECURITY-MODEL.md         @ManiaSacha
+/agents/security-reviewer.md    @ManiaSacha
+
+# Release and packaging surface.
+/.github/workflows/             @ManiaSacha
+/pyproject.toml                 @ManiaSacha
+/.claude-plugin/                @ManiaSacha
+/.mcp.json                      @ManiaSacha

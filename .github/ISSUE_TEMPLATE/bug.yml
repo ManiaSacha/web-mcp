@@ -1,0 +1,76 @@
+name: Bug report
+description: Something behaves incorrectly (not a feed parsing problem)
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If a specific **feed** fails to parse, please use the
+        "Feed doesn't parse" template instead — it asks for the right details.
+
+        For anything security-related, do not open an issue. See
+        [SECURITY.md](https://github.com/ManiaSacha/web-mcp/blob/main/SECURITY.md)
+        and report it privately.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include the tool call or command, with arguments.
+      placeholder: |
+        1. Start the server with `web-mcp --feeds ...`
+        2. Call `search("...")`
+        3. See ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output or traceback
+      render: text
+
+  - type: input
+    id: version
+    attributes:
+      label: web-mcp version
+      description: "`pip show feed-mcp`"
+      placeholder: "0.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version and OS
+      placeholder: "3.12 on Windows 11"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: how
+    attributes:
+      label: How are you running it
+      options:
+        - Claude Code plugin
+        - MCP server added manually (claude mcp add)
+        - Claude Desktop
+        - Directly from source
+        - Other
+    validations:
+      required: true
