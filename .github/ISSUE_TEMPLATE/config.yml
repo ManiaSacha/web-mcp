@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/ManiaSacha/web-mcp/security/advisories/new
+    about: SSRF, resource exhaustion, or anything else exploitable via a feed URL or feed body. Please report privately, not as a public issue.
+  - name: Question or usage help
+    url: https://github.com/ManiaSacha/web-mcp/discussions
+    about: How to configure feeds, wire it into Claude Code, or interpret results.

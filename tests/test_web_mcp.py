@@ -6,11 +6,11 @@ import email.utils
 import ipaddress
 import socket
 import time
+import xml.etree.ElementTree as ET
 
 import pytest
 
 import web_mcp
-
 
 RSS_FEED = """<?xml version="1.0"?>
 <rss version="2.0">
@@ -120,7 +120,7 @@ def test_parse_atom_falls_back_to_self_link_when_no_alternate():
 
 
 def test_parse_feed_raises_on_malformed_xml():
-    with pytest.raises(Exception):
+    with pytest.raises(ET.ParseError):
         web_mcp.parse_feed("<rss><channel><item><title>unclosed")
 
 
@@ -312,7 +312,9 @@ def test_is_blocked_ip_rejects_non_public(addr):
     assert web_mcp.is_blocked_ip(ipaddress.ip_address(addr)) is True
 
 
-@pytest.mark.parametrize("addr", ["93.184.216.34", "8.8.8.8", "2606:2800:220:1::1", "::ffff:8.8.8.8"])
+@pytest.mark.parametrize("addr", [
+    "93.184.216.34", "8.8.8.8", "2606:2800:220:1::1", "::ffff:8.8.8.8",
+])
 def test_is_blocked_ip_allows_public(addr):
     assert web_mcp.is_blocked_ip(ipaddress.ip_address(addr)) is False
 

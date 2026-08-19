@@ -1,0 +1,66 @@
+name: Feed doesn't parse
+description: A feed fails to add, indexes 0 articles, or comes out with wrong titles/links/dates
+title: "[feed] "
+labels: ["feed-compatibility"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Feed parsing is the most common source of bugs
+        here, because RSS and Atom in the wild are far messier than the specs.
+
+        A report with the feed URL and a snippet becomes a test fixture, which
+        is the fastest possible path to a fix.
+
+  - type: input
+    id: url
+    attributes:
+      label: Feed URL
+      description: If it's private or internal, say so and paste a redacted snippet below instead.
+      placeholder: https://example.com/feed.xml
+    validations:
+      required: true
+
+  - type: dropdown
+    id: symptom
+    attributes:
+      label: What happened
+      options:
+        - add_feed failed with an error
+        - add_feed succeeded but indexed 0 articles
+        - Articles indexed but titles are wrong or "(untitled)"
+        - Articles indexed but links are wrong or empty
+        - Articles indexed but dates are wrong
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Exact error or output
+      description: Paste what the tool returned, verbatim.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: snippet
+    attributes:
+      label: Feed snippet
+      description: |
+        One `<item>` or `<entry>` that reproduces the problem, plus the
+        surrounding `<channel>`/`<feed>` opening tag so namespaces are visible.
+        Redact anything private — the structure is what matters, not the content.
+      render: xml
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: web-mcp version
+      description: "`pip show feed-mcp` (the PyPI distribution is named feed-mcp)"
+      placeholder: "0.2.0"
+    validations:
+      required: true

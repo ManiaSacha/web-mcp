@@ -32,12 +32,18 @@ import threading
 import time
 import xml.etree.ElementTree as ET
 from collections import Counter
-from typing import Optional
 from urllib.parse import ParseResult, urljoin, urlparse
 
-from mcp.server.fastmcp import FastMCP
+try:
+    # mcp 2.0 renamed FastMCP to MCPServer and moved it out of
+    # mcp.server.fastmcp entirely, as a breaking change with no deprecation
+    # period. The .tool()/.run() surface this file relies on is unchanged,
+    # so both branches produce an equivalent server.
+    from mcp.server.mcpserver import MCPServer as _MCPServerClass
+except ImportError:  # mcp < 2.0
+    from mcp.server.fastmcp import FastMCP as _MCPServerClass
 
-mcp = FastMCP("web")
+mcp = _MCPServerClass("web")
 
 # ---- defaults -----------------------------------------------------------------
 REFRESH_INTERVAL = 15 * 60          # seconds between background refreshes
@@ -141,13 +147,13 @@ def local(el) -> str:
     return el.tag.split("}")[-1]
 
 
-def parse_date(s: str) -> Optional[float]:
+def parse_date(s: str) -> float | None:
     if not s:
         return None
     try:
         dt = email.utils.parsedate_to_datetime(s)
         return dt.timestamp() if dt else None
-    except Exception:
+    except Exception:  # noqa: BLE001 - feeds invent date formats; any failure means "unknown"
         return None
 
 
@@ -171,7 +177,8 @@ def fetch(url: str, timeout: int = FETCH_TIMEOUT) -> str:
             conn.request("GET", target, headers={
                 "User-Agent": USER_AGENT,
                 "Accept-Encoding": "identity",
-                "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+                "Accept": ("application/rss+xml, application/atom+xml, "
+                           "application/xml, text/xml, */*"),
             })
             resp = conn.getresponse()
 
@@ -230,7 +237,10 @@ def parse_feed(text: str) -> list[dict]:
 
         children = {local(c): c for c in el if local(c) != "link"}
 
-        def text_of(key: str) -> str:
+        def text_of(key: str, children: dict = children) -> str:
+            # children is bound as a default argument rather than captured:
+            # a closure over the loop variable would see whatever the last
+            # iteration left behind if it ever outlived this one.
             c = children.get(key)
             if c is None:
                 return ""
@@ -414,9 +424,12 @@ def refresh_all():
 def _bg_loop():
     while True:
         time.sleep(REFRESH_INTERVAL)
-        try:
+        # If this thread dies, feeds stop updating for the rest of the process
+        # lifetime with no visible symptom, so it must survive anything.
+        # refresh_all already records per-feed errors in feed_info.
+        try:  # noqa: SIM105 - explicit try/except documents the never-die invariant
             refresh_all()
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
 

@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest a new tool, option, or behavior
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before writing: web-mcp is deliberately **one readable file with no
+        dependency beyond `mcp` and the standard library**, and its test suite
+        makes no network calls. Proposals that fit inside those constraints
+        move much faster than ones that don't — and if yours needs a
+        dependency, say so plainly and explain what it buys.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve
+      description: Describe the situation, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like it to do
+      description: If it's a new tool, sketch its name, arguments, and return value.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried or considered instead
+      description: Including whether the existing tools can already get you close.
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: This can be implemented with the standard library plus `mcp`
+        - label: This can be tested without network access
+        - label: I'd be willing to open a PR for this
