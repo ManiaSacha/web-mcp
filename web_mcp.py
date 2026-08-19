@@ -12,6 +12,8 @@ Features:
   - Source health monitoring (dead / silent / broken feeds)
   - Markdown digest generation
   - Scheduled background refresh
+  - SSRF-guarded fetching: scheme allowlist, public-address checks,
+    connect-time IP pinning, and per-hop redirect validation
 
 Run:  python web_mcp.py [--feeds url1,url2]
 """
@@ -19,18 +21,19 @@ from __future__ import annotations
 
 import argparse
 import email.utils
+import http.client
 import ipaddress
 import math
 import re
 import socket
+import ssl
 import sys
 import threading
 import time
-import urllib.request
 import xml.etree.ElementTree as ET
 from collections import Counter
 from typing import Optional
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urljoin, urlparse
 
 from mcp.server.fastmcp import FastMCP
 
@@ -41,6 +44,10 @@ REFRESH_INTERVAL = 15 * 60          # seconds between background refreshes
 FETCH_TIMEOUT = 15                  # seconds
 MAX_FETCH_BYTES = 5 * 1024 * 1024   # refuse to buffer more than 5 MB per feed
 MAX_LIMIT = 100                     # cap on any tool's "limit" argument
+MAX_REDIRECTS = 5                   # hops allowed before a fetch is abandoned
+USER_AGENT = "web-mcp/0.1"
+REDIRECT_STATUSES = (301, 302, 303, 307, 308)
+SSL_CONTEXT = ssl.create_default_context()
 DEFAULT_FEEDS = [
     "https://hnrss.org/frontpage",
     "https://github.blog/feed/",
@@ -58,14 +65,29 @@ within without would
 
 
 # ---- SSRF / URL hardening ------------------------------------------------------
-def assert_fetchable(url: str) -> None:
-    """Reject URLs that aren't safe for a server to fetch on an agent's behalf.
+def is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """True for any address a feed fetch has no business reaching."""
+    # An IPv4-mapped IPv6 address (::ffff:127.0.0.1) describes an IPv4 target,
+    # so classify the mapped address rather than the wrapper.
+    mapped = getattr(ip, "ipv4_mapped", None)
+    if mapped is not None:
+        ip = mapped
+    return bool(ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_multicast or ip.is_reserved or ip.is_unspecified)
 
-    Blocks non-http(s) schemes and resolves the hostname up front so a feed
-    URL can't point at loopback/private/link-local addresses (SSRF into the
-    host's own network). This is a best-effort guard, not a sandbox: it does
-    not protect against a DNS answer that changes between this check and the
-    actual fetch (TOCTOU), which would require a fetch-time IP pin to close.
+
+def assert_fetchable(url: str) -> tuple[ParseResult, str]:
+    """Validate a URL for server-side fetching and pin the address to use.
+
+    Blocks non-http(s) schemes, then resolves the hostname and rejects the URL
+    unless *every* address it resolves to is publicly routable. Returns the
+    parsed URL together with the single IP the caller must connect to.
+
+    Returning the IP is the point: resolving here and letting the HTTP client
+    resolve again at connect time leaves a window where DNS can answer
+    differently the second time (rebinding), so the address that was checked
+    is not the address that gets connected to. Callers pass this IP to
+    open_pinned() so the validated address is the one actually dialed.
     """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
@@ -73,16 +95,45 @@ def assert_fetchable(url: str) -> None:
     if not parsed.hostname:
         raise ValueError("URL has no hostname")
 
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
     try:
-        infos = socket.getaddrinfo(parsed.hostname, None)
+        infos = socket.getaddrinfo(parsed.hostname, port, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
         raise ValueError(f"could not resolve host {parsed.hostname!r}: {exc}") from exc
+    if not infos:
+        raise ValueError(f"host {parsed.hostname!r} resolved to no addresses")
 
-    for family, _, _, _, sockaddr in infos:
+    # Every answer is checked, not just the one we pin: a host that returns a
+    # mix of public and private records must not be reachable by retrying.
+    for _, _, _, _, sockaddr in infos:
         ip = ipaddress.ip_address(sockaddr[0])
-        if (ip.is_private or ip.is_loopback or ip.is_link_local
-                or ip.is_multicast or ip.is_reserved or ip.is_unspecified):
+        if is_blocked_ip(ip):
             raise ValueError(f"refusing to fetch {url!r}: resolves to non-public address {ip}")
+
+    return parsed, infos[0][4][0]
+
+
+def open_pinned(parsed: ParseResult, ip: str, timeout: int) -> http.client.HTTPConnection:
+    """Open a connection to `ip`, addressed as `parsed.hostname`.
+
+    The socket is built by hand and handed to HTTPConnection so that no second
+    name resolution happens. TLS still uses the hostname for SNI and
+    certificate validation, so pinning the IP does not weaken cert checking.
+    """
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    sock = socket.create_connection((ip, port), timeout)
+    try:
+        if parsed.scheme == "https":
+            sock = SSL_CONTEXT.wrap_socket(sock, server_hostname=parsed.hostname)
+    except Exception:
+        sock.close()
+        raise
+
+    conn = http.client.HTTPConnection(parsed.hostname, port, timeout=timeout)
+    # HTTPConnection.send() only dials when self.sock is None, so presetting it
+    # makes the connection use our validated socket as-is.
+    conn.sock = sock
+    return conn
 
 
 # ---- helpers -----------------------------------------------------------------
@@ -101,13 +152,47 @@ def parse_date(s: str) -> Optional[float]:
 
 
 def fetch(url: str, timeout: int = FETCH_TIMEOUT) -> str:
-    assert_fetchable(url)
-    req = urllib.request.Request(url, headers={"User-Agent": "web-mcp/0.1"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        body = resp.read(MAX_FETCH_BYTES + 1)
-        if len(body) > MAX_FETCH_BYTES:
-            raise ValueError(f"feed exceeds {MAX_FETCH_BYTES} byte limit: {url}")
-        return body.decode("utf-8", errors="replace")
+    """Fetch a feed, validating every hop.
+
+    Redirects are followed manually rather than by an HTTP library, because
+    a library that follows them internally never re-runs the SSRF check: a
+    public URL can answer 302 and send the fetch to 169.254.169.254 or any
+    internal host. Each hop here goes back through assert_fetchable().
+    """
+    seen = []
+    for _ in range(MAX_REDIRECTS + 1):
+        seen.append(url)
+        parsed, ip = assert_fetchable(url)
+        conn = open_pinned(parsed, ip, timeout)
+        try:
+            target = parsed.path or "/"
+            if parsed.query:
+                target += "?" + parsed.query
+            conn.request("GET", target, headers={
+                "User-Agent": USER_AGENT,
+                "Accept-Encoding": "identity",
+                "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+            })
+            resp = conn.getresponse()
+
+            if resp.status in REDIRECT_STATUSES:
+                location = resp.getheader("Location")
+                if not location:
+                    raise ValueError(f"HTTP {resp.status} with no Location header: {url}")
+                url = urljoin(url, location)
+                continue
+
+            if resp.status != 200:
+                raise ValueError(f"HTTP {resp.status} {resp.reason}: {url}")
+
+            body = resp.read(MAX_FETCH_BYTES + 1)
+            if len(body) > MAX_FETCH_BYTES:
+                raise ValueError(f"feed exceeds {MAX_FETCH_BYTES} byte limit: {url}")
+            return body.decode("utf-8", errors="replace")
+        finally:
+            conn.close()
+
+    raise ValueError(f"too many redirects (>{MAX_REDIRECTS}): {' -> '.join(seen)}")
 
 
 def _entry_link(el) -> str:
