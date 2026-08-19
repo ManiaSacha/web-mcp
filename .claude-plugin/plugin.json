@@ -1,7 +1,7 @@
 {
   "name": "web-mcp",
   "displayName": "web-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Semantic search over RSS/Atom feeds for AI agents. A single-file MCP server with recency-boosted TF-IDF ranking, trend extraction, markdown digests, and feed health monitoring — no API key, no cloud, and SSRF-guarded fetching. Ships with feed-curation and feed-digest skills plus pm, security-reviewer, and git-pipeline agents.",
   "author": {
     "name": "ManiaSacha",
