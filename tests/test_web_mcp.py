@@ -3,6 +3,8 @@
 Run with:  pytest tests/test_web_mcp.py -v
 """
 import email.utils
+import ipaddress
+import socket
 import time
 
 import pytest
@@ -234,3 +236,207 @@ def test_assert_fetchable_rejects_private_and_loopback_hosts(url):
 def test_assert_fetchable_rejects_url_without_hostname():
     with pytest.raises(ValueError):
         web_mcp.assert_fetchable("http:///no-host")
+
+
+# ---- fetch-time pinning and redirect validation -------------------------------
+PUBLIC_IP = "93.184.216.34"
+
+
+def fake_getaddrinfo(host, port, *args, **kwargs):
+    """Resolve literal IPs to themselves and any name to a public address.
+
+    Keeps these tests entirely offline while still exercising the real
+    classification logic in assert_fetchable.
+    """
+    try:
+        ipaddress.ip_address(host)
+        resolved = host
+    except ValueError:
+        resolved = PUBLIC_IP
+    return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (resolved, port))]
+
+
+class FakeResponse:
+    def __init__(self, status=200, headers=None, body=b"", reason="OK"):
+        self.status = status
+        self.reason = reason
+        self._headers = headers or {}
+        self._body = body
+
+    def getheader(self, name, default=None):
+        return self._headers.get(name, default)
+
+    def read(self, amt=-1):
+        return self._body if amt < 0 else self._body[:amt]
+
+
+class FakeConn:
+    def __init__(self, response):
+        self._response = response
+        self.closed = False
+
+    def request(self, method, target, headers=None):
+        self.method, self.target, self.headers = method, target, headers
+
+    def getresponse(self):
+        return self._response
+
+    def close(self):
+        self.closed = True
+
+
+@pytest.fixture
+def offline(monkeypatch):
+    monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+
+
+def scripted_opener(monkeypatch, responses):
+    """Replace open_pinned with a scripted sequence, recording each hop."""
+    hops = []
+    queue = list(responses)
+
+    def _open(parsed, ip, timeout):
+        hops.append((parsed.geturl(), ip))
+        return FakeConn(queue.pop(0))
+
+    monkeypatch.setattr(web_mcp, "open_pinned", _open)
+    return hops
+
+
+@pytest.mark.parametrize("addr", [
+    "127.0.0.1", "10.0.0.5", "192.168.1.1", "172.16.0.1", "169.254.169.254",
+    "::1", "0.0.0.0", "224.0.0.1",
+    "::ffff:127.0.0.1", "::ffff:169.254.169.254", "::ffff:10.0.0.1",
+])
+def test_is_blocked_ip_rejects_non_public(addr):
+    assert web_mcp.is_blocked_ip(ipaddress.ip_address(addr)) is True
+
+
+@pytest.mark.parametrize("addr", ["93.184.216.34", "8.8.8.8", "2606:2800:220:1::1", "::ffff:8.8.8.8"])
+def test_is_blocked_ip_allows_public(addr):
+    assert web_mcp.is_blocked_ip(ipaddress.ip_address(addr)) is False
+
+
+def test_assert_fetchable_returns_pinned_ip(offline):
+    parsed, ip = web_mcp.assert_fetchable("https://feeds.example/rss")
+    assert parsed.hostname == "feeds.example"
+    assert ip == PUBLIC_IP
+
+
+def test_assert_fetchable_rejects_when_any_resolved_address_is_private(monkeypatch):
+    """A host answering with both a public and a private record must be
+    refused outright — otherwise a retry could land on the private one."""
+    def mixed(host, port, *args, **kwargs):
+        return [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", (PUBLIC_IP, port)),
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", port)),
+        ]
+    monkeypatch.setattr(socket, "getaddrinfo", mixed)
+    with pytest.raises(ValueError, match="non-public"):
+        web_mcp.assert_fetchable("https://split-horizon.example/rss")
+
+
+def test_assert_fetchable_rejects_empty_resolution(monkeypatch):
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *a, **k: [])
+    with pytest.raises(ValueError, match="no addresses"):
+        web_mcp.assert_fetchable("https://void.example/rss")
+
+
+def test_open_pinned_dials_the_validated_ip_not_the_hostname(monkeypatch):
+    """Regression test for DNS rebinding: the socket must be opened against
+    the address assert_fetchable approved, never by re-resolving the name."""
+    dialed = {}
+
+    def fake_create_connection(address, timeout=None):
+        dialed["address"] = address
+        return object()
+
+    monkeypatch.setattr(socket, "create_connection", fake_create_connection)
+    parsed = web_mcp.urlparse("http://feeds.example/rss")
+    conn = web_mcp.open_pinned(parsed, PUBLIC_IP, timeout=5)
+
+    assert dialed["address"] == (PUBLIC_IP, 80)
+    assert conn.host == "feeds.example"   # Host header still uses the name
+
+
+def test_fetch_returns_body(offline, monkeypatch):
+    scripted_opener(monkeypatch, [FakeResponse(body=b"<rss></rss>")])
+    assert web_mcp.fetch("https://feeds.example/rss") == "<rss></rss>"
+
+
+def test_fetch_revalidates_each_redirect_hop(offline, monkeypatch):
+    """Every hop must go back through assert_fetchable, not just the first."""
+    checked = []
+    real = web_mcp.assert_fetchable
+    monkeypatch.setattr(web_mcp, "assert_fetchable",
+                        lambda u: (checked.append(u), real(u))[1])
+    hops = scripted_opener(monkeypatch, [
+        FakeResponse(301, {"Location": "https://cdn.example/rss"}),
+        FakeResponse(body=b"<rss>final</rss>"),
+    ])
+
+    assert web_mcp.fetch("https://feeds.example/rss") == "<rss>final</rss>"
+    assert checked == ["https://feeds.example/rss", "https://cdn.example/rss"]
+    assert len(hops) == 2
+
+
+def test_fetch_blocks_redirect_to_cloud_metadata_endpoint(offline, monkeypatch):
+    """Regression test: a public URL that 302s at an internal address used to
+    be followed blindly, because urllib re-runs no checks on redirects."""
+    scripted_opener(monkeypatch, [
+        FakeResponse(302, {"Location": "http://169.254.169.254/latest/meta-data/"}),
+        FakeResponse(body=b"SHOULD NEVER BE READ"),
+    ])
+    with pytest.raises(ValueError, match="non-public address"):
+        web_mcp.fetch("https://feeds.example/rss")
+
+
+def test_fetch_blocks_relative_redirect_onto_blocked_host(offline, monkeypatch):
+    scripted_opener(monkeypatch, [
+        FakeResponse(307, {"Location": "//127.0.0.1/rss"}),
+        FakeResponse(body=b"SHOULD NEVER BE READ"),
+    ])
+    with pytest.raises(ValueError, match="non-public address"):
+        web_mcp.fetch("https://feeds.example/rss")
+
+
+def test_fetch_gives_up_after_max_redirects(offline, monkeypatch):
+    scripted_opener(monkeypatch, [
+        FakeResponse(302, {"Location": f"https://hop{i}.example/rss"})
+        for i in range(web_mcp.MAX_REDIRECTS + 1)
+    ])
+    with pytest.raises(ValueError, match="too many redirects"):
+        web_mcp.fetch("https://feeds.example/rss")
+
+
+def test_fetch_rejects_redirect_without_location(offline, monkeypatch):
+    scripted_opener(monkeypatch, [FakeResponse(302, {})])
+    with pytest.raises(ValueError, match="no Location"):
+        web_mcp.fetch("https://feeds.example/rss")
+
+
+def test_fetch_raises_on_error_status(offline, monkeypatch):
+    scripted_opener(monkeypatch, [FakeResponse(404, reason="Not Found")])
+    with pytest.raises(ValueError, match="HTTP 404"):
+        web_mcp.fetch("https://feeds.example/rss")
+
+
+def test_fetch_enforces_size_cap(offline, monkeypatch):
+    oversized = b"x" * (web_mcp.MAX_FETCH_BYTES + 1)
+    scripted_opener(monkeypatch, [FakeResponse(body=oversized)])
+    with pytest.raises(ValueError, match="byte limit"):
+        web_mcp.fetch("https://feeds.example/rss")
+
+
+def test_fetch_closes_connection_on_error(offline, monkeypatch):
+    opened = []
+
+    def _open(parsed, ip, timeout):
+        conn = FakeConn(FakeResponse(500, reason="Server Error"))
+        opened.append(conn)
+        return conn
+
+    monkeypatch.setattr(web_mcp, "open_pinned", _open)
+    with pytest.raises(ValueError):
+        web_mcp.fetch("https://feeds.example/rss")
+    assert opened[0].closed is True
