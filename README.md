@@ -9,6 +9,8 @@ Semantic search over RSS/Atom feeds for AI agents — a single-file [MCP](https:
 
 Point it at a handful of RSS/Atom feeds and give an agent tools to search them by meaning (TF-IDF + recency boost), see what's trending, generate a digest, and monitor feed health — all running locally against feeds you control.
 
+![web-mcp demo](public/web-mcp.gif)
+
 ## Features
 
 - **Add/remove/list feeds** — RSS 2.0 and Atom
