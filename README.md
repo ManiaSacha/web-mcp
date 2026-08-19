@@ -17,12 +17,14 @@ Point it at a handful of RSS/Atom feeds and give an agent tools to search them b
 
 Requires Python 3.10+.
 
+> **On the package name:** the project is `web-mcp`, but the PyPI distribution is **`feed-mcp`** — PyPI rejects `web-mcp` as too similar to an unrelated existing `webmcp` package. So you `pip install feed-mcp`, and it installs both a `web-mcp` and a `feed-mcp` command; they're the same program, use whichever you prefer.
+
 ### Option A — Claude Code plugin (recommended)
 
 Installs the MCP server **and** the bundled skills and agents in one step:
 
 ```bash
-pip install web-mcp
+pip install feed-mcp
 ```
 
 Then, inside Claude Code:
@@ -39,7 +41,7 @@ The plugin registers the `web` MCP server automatically and prompts you for a st
 ### Option B — MCP server only
 
 ```bash
-pip install web-mcp
+pip install feed-mcp
 claude mcp add web -- web-mcp --feeds https://hnrss.org/frontpage
 ```
 
