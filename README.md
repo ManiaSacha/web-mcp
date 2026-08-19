@@ -110,10 +110,17 @@ Once connected, ask your agent things like:
 
 ## Security notes
 
-- Only `http://` and `https://` feed URLs are accepted.
-- Before fetching, the target hostname is resolved and rejected if it points at a loopback, private, link-local, multicast, or otherwise non-public address — this blocks a compromised or careless `add_feed` call from being used to probe your local network or cloud metadata endpoints (SSRF). This is a best-effort guard, not a sandbox: see the docstring on `assert_fetchable` in [web_mcp.py](web_mcp.py) for its known limitation (DNS can change between the check and the fetch).
-- Fetched feed bodies are capped at 5 MB to bound memory use from a hostile or misbehaving feed.
-- This server is meant to run **locally**, over stdio, for your own agent. It has no auth of its own — don't expose it over a network without adding some.
+`add_feed(url)` makes the server fetch a URL that may have reached your agent from a web page rather than from you, so that path is treated as untrusted:
+
+- **Scheme allowlist** — only `http://` and `https://`. `file://`, `ftp://`, `gopher://`, and `data:` are refused.
+- **Public addresses only** — a URL is rejected unless *every* address it resolves to is publicly routable. Loopback, private, link-local (including the `169.254.169.254` cloud metadata endpoint), multicast, and reserved addresses are blocked, as are their IPv4-mapped IPv6 forms.
+- **Connect-time IP pinning** — the address that was validated is the one actually dialed, so DNS cannot answer differently between the check and the connection (rebinding). TLS still validates certificates against the hostname.
+- **Per-hop redirect validation** — redirects are followed manually and re-validated at every hop, so a public URL cannot bounce the fetch to an internal host. Capped at 5 hops.
+- **Resource bounds** — 5 MB per feed body, an explicit socket timeout, and a clamp on every tool's `limit`.
+
+Two things this does *not* do: it has **no authentication** (it's meant to run locally over stdio — don't expose it on a network), and it does not vet feed content. Indexed article text is written by whoever controls the feed, so treat it as data, never as instructions.
+
+Full detail, including the limits that remain, is in [docs/SECURITY-MODEL.md](docs/SECURITY-MODEL.md). To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## Development
 
