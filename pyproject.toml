@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "web-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "Semantic search over RSS/news feeds for AI agents — a single-file MCP server, no API key, no cloud."
 readme = "README.md"
 requires-python = ">=3.10"
