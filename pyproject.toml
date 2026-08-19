@@ -3,7 +3,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "web-mcp"
+# Distribution name only. PyPI rejects "web-mcp" as too similar to the
+# existing "webmcp" project — its check ignores separators. The repo, the
+# Claude Code plugin, the module, and the web-mcp command are all unaffected.
+name = "feed-mcp"
 version = "0.2.0"
 description = "Semantic search over RSS/news feeds for AI agents — a single-file MCP server, no API key, no cloud."
 readme = "README.md"
@@ -36,6 +39,8 @@ dev = [
 
 [project.scripts]
 web-mcp = "web_mcp:main"
+# Alias matching the distribution name, so either command works.
+feed-mcp = "web_mcp:main"
 
 [project.urls]
 Homepage = "https://github.com/ManiaSacha/web-mcp"

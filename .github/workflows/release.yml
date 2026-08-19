@@ -5,7 +5,11 @@ name: release
 #
 # One-time setup before the first release:
 #   https://pypi.org/manage/account/publishing/ -> add a pending publisher with
-#   owner ManiaSacha, repo web-mcp, workflow release.yml, environment pypi.
+#   PyPI project name feed-mcp, owner ManiaSacha, repo web-mcp,
+#   workflow release.yml, environment pypi.
+#
+# The distribution is named feed-mcp, not web-mcp: PyPI refuses the latter as
+# too similar to the unrelated existing "webmcp" project.
 
 on:
   push:

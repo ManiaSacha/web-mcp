@@ -44,14 +44,47 @@ exists and not to invent one otherwise. It doesn't exist yet — it's scheduled
 for Phase 3. Following the rule as written rather than quietly widening this
 branch; the GitHub Release notes cover 0.2.0 in the meantime.
 
+## PyPI distribution renamed to `feed-mcp`
+
+PyPI refused to register `web-mcp`: *"This project name is too similar to an
+existing project."* The blocker is [`webmcp`](https://pypi.org/project/webmcp/)
+(v0.0.1, unrelated) — PyPI's similarity check ignores separators, so `web-mcp`
+and `webmcp` are treated as the same name. Checking that the exact name was
+unclaimed (it returned 404) did not predict this; the similarity rule only
+fires at registration.
+
+`rss-mcp` is blocked the same way by an existing `rssmcp`. `feed-mcp` is free,
+and so is `feedmcp`, so it clears the separator collision.
+
+**Only the distribution name changed.** The GitHub repo, plugin name,
+marketplace entry, module (`web_mcp.py`), and the `web-mcp` command in
+`.mcp.json` are all untouched, because `[project.scripts]` declares command
+names independently of the distribution name. A `feed-mcp` alias command is
+declared alongside `web-mcp`, both pointing at the same entry point, so either
+works.
+
+The wheel confirms it:
+
+```
+[console_scripts]
+feed-mcp = web_mcp:main
+web-mcp = web_mcp:main
+```
+
+README gains a short note explaining why `pip install feed-mcp` yields a
+`web-mcp` command, since that mismatch is otherwise confusing. The install
+scripts needed no change — they install from the checkout or the git URL, not
+from PyPI by name.
+
 ## Release steps after this merges
 
-1. Register the PyPI pending publisher first (project `web-mcp`, owner
-   `ManiaSacha`, repo `web-mcp`, workflow `release.yml`, environment `pypi`).
+1. Register the PyPI pending publisher first — project **`feed-mcp`**, owner
+   `ManiaSacha`, repo `web-mcp`, workflow `release.yml`, environment `pypi`.
    Without it the publish job fails at the OIDC exchange.
 2. `git checkout main && git pull && git tag v0.2.0 && git push origin v0.2.0`
 3. The workflow verifies the version, runs the tests, builds, `twine check`s,
    then publishes — creating the PyPI project on first success.
 
-`web-mcp` was confirmed available on PyPI: both the JSON API and the simple
-index return 404.
+Verified locally: `python -m build` produces `feed_mcp-0.2.0` sdist and wheel,
+`twine check` passes on both, the wheel declares both console scripts, and the
+workflow's tag-vs-version gate passes for `v0.2.0`.
