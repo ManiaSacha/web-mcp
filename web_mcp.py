@@ -34,9 +34,16 @@ import xml.etree.ElementTree as ET
 from collections import Counter
 from urllib.parse import ParseResult, urljoin, urlparse
 
-from mcp.server.fastmcp import FastMCP
+try:
+    # mcp 2.0 renamed FastMCP to MCPServer and moved it out of
+    # mcp.server.fastmcp entirely, as a breaking change with no deprecation
+    # period. The .tool()/.run() surface this file relies on is unchanged,
+    # so both branches produce an equivalent server.
+    from mcp.server.mcpserver import MCPServer as _MCPServerClass
+except ImportError:  # mcp < 2.0
+    from mcp.server.fastmcp import FastMCP as _MCPServerClass
 
-mcp = FastMCP("web")
+mcp = _MCPServerClass("web")
 
 # ---- defaults -----------------------------------------------------------------
 REFRESH_INTERVAL = 15 * 60          # seconds between background refreshes
