@@ -1,9 +1,9 @@
 ---
-name: research-digest
+name: feed-digest
 description: Use when the user wants a synthesized summary or research digest built from indexed feeds — e.g. "what's happening in AI this week", "summarize the news on X", "give me a digest of the last 24 hours".
 ---
 
-# Research digest
+# Feed digest
 
 Turns web-mcp's raw tools (`search`, `trending`, `digest`, `recent`) into a synthesized answer for the user, rather than just relaying tool output verbatim.
 

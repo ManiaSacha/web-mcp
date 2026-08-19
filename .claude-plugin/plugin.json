@@ -1,0 +1,42 @@
+{
+  "name": "web-mcp",
+  "displayName": "web-mcp",
+  "version": "0.1.0",
+  "description": "Semantic search over RSS/Atom feeds for AI agents. A single-file MCP server with recency-boosted TF-IDF ranking, trend extraction, markdown digests, and feed health monitoring — no API key, no cloud, and SSRF-guarded fetching. Ships with feed-curation and feed-digest skills plus pm, security-reviewer, and git-pipeline agents.",
+  "author": {
+    "name": "ManiaSacha",
+    "url": "https://github.com/ManiaSacha"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/ManiaSacha/web-mcp#readme",
+  "repository": "https://github.com/ManiaSacha/web-mcp",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "rss",
+    "atom",
+    "feeds",
+    "news",
+    "semantic-search",
+    "tf-idf",
+    "ranked-search",
+    "trending-topics",
+    "digest",
+    "feed-health",
+    "self-hosted",
+    "offline",
+    "no-api-key",
+    "stdlib-only",
+    "ssrf-safe-fetchers",
+    "research",
+    "monitoring"
+  ],
+  "userConfig": {
+    "feeds": {
+      "type": "string",
+      "title": "Starting feeds",
+      "description": "Comma-separated RSS/Atom feed URLs to index on startup. You can add more later with the add_feed tool.",
+      "default": "https://hnrss.org/frontpage,https://github.blog/feed/"
+    }
+  }
+}

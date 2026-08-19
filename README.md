@@ -15,40 +15,84 @@ Point it at a handful of RSS/Atom feeds and give an agent tools to search them b
 
 ## Install
 
+Requires Python 3.10+.
+
+### Option A — Claude Code plugin (recommended)
+
+Installs the MCP server **and** the bundled skills and agents in one step:
+
 ```bash
 pip install web-mcp
 ```
 
-Or run directly from source:
+Then, inside Claude Code:
 
-```bash
-git clone https://github.com/ManiaSacha/web-mcp.git
-cd web-mcp
-pip install -e .
+```
+/plugin marketplace add ManiaSacha/web-mcp
+/plugin install web-mcp@maniasacha-web-mcp
 ```
 
-## Quick start
+The plugin registers the `web` MCP server automatically and prompts you for a starting feed list. If the install summary says `Run /reload-plugins to activate.`, run that.
 
-Run the server with a starting set of feeds:
+> The `pip install` step is required: the plugin's MCP server invokes the `web-mcp` command, which pip puts on your PATH.
+
+### Option B — MCP server only
 
 ```bash
-python web_mcp.py --feeds https://hnrss.org/frontpage,https://github.blog/feed/
+pip install web-mcp
+claude mcp add web -- web-mcp --feeds https://hnrss.org/frontpage
 ```
 
-### Use with Claude Code / Claude Desktop
-
-Add it as an MCP server, e.g. in `claude_desktop_config.json`:
+For **Claude Desktop**, add this to `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "web": {
-      "command": "python",
-      "args": ["/absolute/path/to/web_mcp.py", "--feeds", "https://hnrss.org/frontpage"]
+      "command": "web-mcp",
+      "args": ["--feeds", "https://hnrss.org/frontpage,https://github.blog/feed/"]
     }
   }
 }
 ```
+
+### Option C — from source
+
+```bash
+git clone https://github.com/ManiaSacha/web-mcp.git
+cd web-mcp
+./install.sh          # Windows: .\install.ps1
+```
+
+The install scripts check your Python version, install the package, and print the exact next command for your setup.
+
+## Quick start
+
+Run the server directly to check it works:
+
+```bash
+web-mcp --feeds https://hnrss.org/frontpage,https://github.blog/feed/
+```
+
+It speaks MCP over stdio, so it will sit silently waiting for a client — that's correct behavior, not a hang. Press Ctrl+C to exit.
+
+Once connected, ask your agent things like:
+
+- *"What's trending across my feeds today?"*
+- *"Search my feeds for anything about Postgres performance."*
+- *"Give me a digest of the last 24 hours."*
+- *"Are any of my feeds broken?"*
+
+## What's included
+
+| Component | Name | Purpose |
+|---|---|---|
+| MCP server | `web` | The 9 tools below |
+| Skill | `feed-curation` | Add, audit, and prune feeds |
+| Skill | `feed-digest` | Turn raw tool output into a synthesized brief |
+| Agent | `pm` | Scopes features against the single-file philosophy |
+| Agent | `security-reviewer` | Audits the SSRF/fetch surface |
+| Agent | `git-pipeline` | Branching, commits, and review handoff |
 
 ## Tools
 

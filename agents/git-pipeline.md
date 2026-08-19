@@ -42,7 +42,7 @@ Keep the subject line under ~70 characters. Use the body only when the *why* isn
 
 - You **MUST NOT** create a pull request or merge a branch. Opening a PR and merging into `main` is performed manually by the user, always.
 - **Merging ban**: you are strictly forbidden from running any merge command — `git merge`, `git rebase` onto/into `main`, or merging via `gh pr merge` or any GitHub API/CLI call. If asked to merge, decline and explain that merging is the user's step.
-- Once a branch's changes are ready, place a review file directly on that branch — `review.md` at the repo root — for the user to inspect. It should cover:
+- Once a branch's changes are ready, place a review file directly on that branch — `reviews/<branch-name>.md`, e.g. `reviews/feature-plugin-distribution.md` — for the user to inspect. The filename must be derived from the branch so that two branches never write to the same path: a fixed `review.md` at the repo root makes every branch collide with every other branch on that one file, producing an add/add merge conflict on each PR. It should cover:
   - What changed and why (one or two sentences per logical change, not a diff dump).
   - Which tests were run and their result (`pytest` output summary).
   - Any known limitations, tradeoffs, or follow-up work the user should know about before merging.
@@ -51,7 +51,7 @@ Keep the subject line under ~70 characters. Use the body only when the *why* isn
 **You approving the user's review feedback:**
 
 - When the user submits feedback, review comments, or requested edits on a branch: process and acknowledge them, then execute the requested changes.
-- After making changes, update `review.md` on the same branch to reflect what changed in response to the feedback — don't leave it describing the pre-feedback state.
+- After making changes, update that branch's `reviews/<branch-name>.md` to reflect what changed in response to the feedback — don't leave it describing the pre-feedback state.
 - Re-run `pytest` after any change and report the result before handing back control.
 - Once updated and verified, yield control back to the user to open the PR and merge. Don't re-open or restate approval on their behalf.
 

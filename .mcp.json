@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "web": {
+      "command": "web-mcp",
+      "args": ["--feeds", "${user_config.feeds}"]
+    }
+  }
+}
