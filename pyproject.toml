@@ -53,3 +53,29 @@ include = ["web_mcp.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "S", "BLE", "C4", "RUF"]
+ignore = [
+    # The stopword list is a readable block of prose. Ruff wants a one-line
+    # list literal of ~120 quoted strings, which is strictly worse to edit.
+    "SIM905",
+    # Suggests swapping xml.etree for defusedxml. ElementTree does not
+    # resolve external entities, so XXE does not apply here, and entity
+    # expansion is bounded by MAX_FETCH_BYTES. Taking the dependency would
+    # break the stdlib-only constraint for no real gain. Reasoning and
+    # limits are written up in docs/SECURITY-MODEL.md.
+    "S314",
+]
+# BLE001 and S110 stay enabled so a *new* blind except gets caught. The few
+# deliberate ones are marked with `# noqa` at the site, where the reason is
+# visible to whoever reads the code.
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use bare assert, and "0.0.0.0" appears as blocked-address test data
+# rather than as a bind address.
+"tests/*" = ["S101", "S104"]
