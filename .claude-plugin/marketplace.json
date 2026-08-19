@@ -1,0 +1,35 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "maniasacha-web-mcp",
+  "owner": {
+    "name": "ManiaSacha",
+    "url": "https://github.com/ManiaSacha"
+  },
+  "description": "Self-hosted feed intelligence for AI agents.",
+  "plugins": [
+    {
+      "name": "web-mcp",
+      "source": "./",
+      "description": "Semantic search over RSS/Atom feeds for AI agents. Single-file MCP server with recency-boosted TF-IDF ranking, trending topics, markdown digests, and source health monitoring. No API key, no cloud.",
+      "version": "0.1.0",
+      "author": {
+        "name": "ManiaSacha",
+        "url": "https://github.com/ManiaSacha"
+      },
+      "homepage": "https://github.com/ManiaSacha/web-mcp#readme",
+      "repository": "https://github.com/ManiaSacha/web-mcp",
+      "license": "MIT",
+      "category": "research",
+      "keywords": [
+        "mcp",
+        "rss",
+        "atom",
+        "feeds",
+        "semantic-search",
+        "news",
+        "digest",
+        "self-hosted"
+      ]
+    }
+  ]
+}
