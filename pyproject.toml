@@ -12,9 +12,18 @@ license = { text = "MIT" }
 authors = [{ name = "Mania Sacha" }]
 keywords = ["mcp", "rss", "atom", "news", "search", "agents", "claude"]
 classifiers = [
-    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    "Topic :: Text Processing :: Indexing",
+    "Typing :: Typed",
 ]
 dependencies = [
     "mcp>=1.2.0",
@@ -30,7 +39,9 @@ web-mcp = "web_mcp:main"
 
 [project.urls]
 Homepage = "https://github.com/ManiaSacha/web-mcp"
+Repository = "https://github.com/ManiaSacha/web-mcp"
 Issues = "https://github.com/ManiaSacha/web-mcp/issues"
+Changelog = "https://github.com/ManiaSacha/web-mcp/releases"
 
 [tool.hatch.build.targets.wheel]
 include = ["web_mcp.py"]
